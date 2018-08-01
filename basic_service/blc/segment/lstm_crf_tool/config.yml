@@ -1,0 +1,116 @@
+data_params:
+  path_result: /mnt/mfsb/bgn/concept_relation/zhangyunfei3/workplacce/blc/segment/data/pred_clothes_bio_zyf.dat
+  path_test: /mnt/mfsb/bgn/concept_relation/zhangyunfei3/workplacce/blc/segment/data/clothes_bio_zyf.dat
+  path_train: /mnt/mfsb/bgn/concept_relation/zhangyunfei3/workplacce/blc/segment/data/corpus.train
+  sep: table
+  voc_params:
+    char: {min_count: 0, path: ./Res/voc/char.voc.pkl}
+    f0: {min_count: 0, path: ./Res/voc/f0.voc.pkl}
+    f1: {min_count: 0, path: ./Res/voc/f1.voc.pkl}
+    f10: {min_count: 0, path: ./Res/voc/f10.voc.pkl}
+    f11: {min_count: 0, path: ./Res/voc/f11.voc.pkl}
+    f12: {min_count: 0, path: ./Res/voc/f12.voc.pkl}
+    f2: {min_count: 0, path: ./Res/voc/f2.voc.pkl}
+    f3: {min_count: 0, path: ./Res/voc/f3.voc.pkl}
+    f4: {min_count: 0, path: ./Res/voc/f4.voc.pkl}
+    f5: {min_count: 0, path: ./Res/voc/f5.voc.pkl}
+    f6: {min_count: 0, path: ./Res/voc/f6.voc.pkl}
+    f7: {min_count: 0, path: ./Res/voc/f7.voc.pkl}
+    f8: {min_count: 0, path: ./Res/voc/f8.voc.pkl}
+    f9: {min_count: 0, path: ./Res/voc/f9.voc.pkl}
+    label: {min_count: 0, path: ./Res/voc/label.voc.pkl}
+model: NER
+model_params:
+  batch_size: 2048
+  bilstm_params: {num_layers: 1, num_units: 256, rnn_dropout: 0.2}
+  clip: 10
+  conv_dropout: 0.2
+  conv_filter_len_list: [1, 2, 3, 4, 5]
+  conv_filter_size_list: [8, 8, 8, 8, 8]
+  dev_size: 0.1
+  dropout_rate: 0.5
+  embed_params:
+    char:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [85, 16]
+    f0:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [123347, 64]
+    f1:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f10:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [3, 32]
+    f11:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [3853, 32]
+    f12:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [3750, 32]
+    f2:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f3:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f4:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f5:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f6:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f7:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f8:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+    f9:
+      dropout_rate: 0.3
+      path: null
+      path_pre_train: null
+      shape: [4, 32]
+  feature_names: [f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12]
+  l2_rate: 0.001
+  learning_rate: 0.002
+  max_patience: 5
+  nb_classes: 27
+  nb_epoch: 20
+  path_model: ./Model/best_model
+  rnn_unit: lstm
+  sequence_len_pt: 98
+  sequence_length: 23
+  use_char_feature: false
+  use_crf: true
+  word_len_pt: 95
+  word_length: 11

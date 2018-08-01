@@ -1,0 +1,22 @@
+bgn 项目GPU计算资源
+工作目录: /mnt/mfsb/bgn
+目前分三个方向进行使用，1: Entity and Attritue 2: Concepts and Relations 3: Applications
+建议在/mnt/mfsb/bgn目录下，在各个方向目录下建立个人文件夹。
+
+1: Entity and Attritue 
+172.18.161.52 可访问外网
+172.18.161.39 
+172.18.162.14 可访问hive
+
+2: Concepts and Relations
+172.18.161.54 可访问外网
+172.18.161.46 
+172.18.161.34 可访问hive
+
+3: Applications
+172.18.161.37 可访问外网
+172.18.161.23 
+172.18.161.32 
+172.18.161.35 可访问hive
+
+账户：admin passwd:h2ZTgzYjM3y

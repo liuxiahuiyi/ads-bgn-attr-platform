@@ -1,0 +1,4 @@
+set mapred.reduce.tasks = 10000;
+insert overwrite table bgn.ext_data  partition(item_second_cate_cd='ITEM_SECOND_CATE_CD_ORIG',com_attr_cd='com_cd')
+select a.*,ext.* from (select item_sku_id,regexp_replace(sku_name,',','') as sku_name,item_third_cate_cd,item_third_cate_name from gdm.gdm_m03_item_sku_da a where item_second_cate_cd = 'ITEM_SECOND_CATE_CD_ORIG' and dt = '2018-05-01' and sku_valid_flag = 1 and sku_status_cd != '3000' and sku_status_cd != '3010' and item_sku_id is not null) a left join (select item_sku_id,com_attr_value_cd,com_attr_value_name from gdm.gdm_m03_item_sku_ext_attr_da where dt = '2018-05-01' and com_attr_cd = 'com_cd' and (ITEM_THIRD_CATE_CD_ORIG)) ext on a.item_sku_id = ext.item_sku_id where ext.com_attr_value_cd = 'NULL' or ext.com_attr_value_cd  is  null  or ext.com_attr_value_name = '其它'
+
