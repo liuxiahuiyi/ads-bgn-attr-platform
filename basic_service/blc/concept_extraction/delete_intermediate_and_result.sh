@@ -1,2 +1,0 @@
-rm intermediate/*
-rm result/*

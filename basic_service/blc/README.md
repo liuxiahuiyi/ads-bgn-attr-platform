@@ -1,1 +1,0 @@
-Basic level categorization, including concepts extraction, filtering, concept graph constructing and blc discovering.
