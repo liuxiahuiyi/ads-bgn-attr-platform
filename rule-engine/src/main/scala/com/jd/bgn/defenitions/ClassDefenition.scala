@@ -16,6 +16,8 @@ case class Source(
   item_sku_id: String,
   sku_name: String,
   barndname_full: String,
+  colour: String,
+  size: String,
   jd_prc: String,
   com_attr_cd: String,
   com_attr_name: String,
@@ -31,6 +33,8 @@ case class Target(
   item_sku_id: String,
   sku_name: String,
   barndname_full: String,
+  colour: String,
+  size: String,
   jd_prc: String,
   com_attr_cd: String,
   com_attr_name: String,
@@ -46,7 +50,9 @@ case class Target(
   def getMeta(column: String) = column match {
     case "sku_name" => sku_name
     case "barndname_full" => barndname_full
-    case "jd_prc" => jd_prc
+    case "colour" => colour
+    case "size" => size
+    case "jd_prc" => jd_prc 
     case "_" => throw new Error(s"unknown meta column ${column}")
   }
 }

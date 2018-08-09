@@ -10,6 +10,7 @@ class RulesGenerator(path: String) extends Serializable {
   private final val logger = LoggerFactory.getLogger(this.getClass)
   private val defaults = Map("columns" -> "sku_name",
                              "category.split" -> "item_first_cate_cd",
+                             "revision.bulk" -> "invalid",
                              "attr_value.length_mode" -> "char",
                              "attr_value.omit" -> "",
                              "rule" -> "matching",
@@ -71,6 +72,10 @@ class RulesGenerator(path: String) extends Serializable {
           case null => defaults("category.split")
           case _ => properties.getProperty(s"${cate_attr_group_id}.category.split")
         }
+        val revision_bulk = properties.getProperty(s"${cate_attr_group_id}.revision.bulk") match {
+          case null => defaults("revision.bulk")
+          case _ => properties.getProperty(s"${cate_attr_group_id}.revision.bulk")
+        }
         val attr_value_length_mode = properties.getProperty(s"${cate_attr_group_id}.attr_value.length_mode") match {
           case null => defaults("attr_value.length_mode")
           case _ => properties.getProperty(s"${cate_attr_group_id}.attr_value.length_mode")
@@ -86,7 +91,7 @@ class RulesGenerator(path: String) extends Serializable {
           case _ => properties.getProperty(s"${cate_attr_group_id}.rule")
         }
         common_rules = common_rules ++ Map((item_first_cate_cd, com_attr_cd_group) -> new Common(
-          columns, category_split, attr_value_length_mode, attr_value_omit, rule))
+          columns, category_split, revision_bulk, attr_value_length_mode, attr_value_omit, rule))
 
         rule match {
           case "matching" => {

@@ -36,7 +36,7 @@ class RuleEngine(
     // debug
     _attr_group_map.foreach((e) => {
       println(e._1)
-      e._2.foreach(println("        ", _))
+      e._2.foreach(println("attr_group_map:", _))
     })
     // debug
     val common_rules_broadcast = sc.broadcast(_common_rules)
@@ -49,57 +49,72 @@ class RuleEngine(
     val source = getSource()
     logger.info(s"count of source data is: ${source.count}")
     logger.info(s"schema of source data is: ${source.schema}")
-    val (train_source, inference_source) = splitSource(source)
-    logger.info(s"count of train source data is: ${train_source.count}")
-    logger.info(s"schema of train source data is: ${train_source.schema}")
-    logger.info(s"count of inference source data is: ${inference_source.count}")
-    logger.info(s"schema of inference source data is: ${inference_source.schema}")
+    val attr_cd_name_map = getAttrCdNameMap(source)
+    val attr_cd_name_map_broadcast = sc.broadcast(attr_cd_name_map)
+    // debug start
+    attr_cd_name_map.foreach((e) => {
+      println("item_first_cate_cd:", e._1)
+      e._2.foreach(println("attr_cd_name_map:", _))
+    })
+    // debug end
 
     val required_attr = getRequiredAttr(source)
     val required_attr_broadcast = sc.broadcast(required_attr)
     // debug start
     required_attr.foreach((e) => {
-      println("key:", e._1)
-      e._2.foreach(println("       ", _))
+      println("item_first_cate_cd and item_second_cate_cd:", e._1)
+      e._2.foreach(println("attr cd and name:", _))
     })
     // debug end
     val supplement = getSupplement(source, required_attr_broadcast.value)
     logger.info(s"count of supplement is: ${supplement.count}")
     logger.info(s"schema of supplement is: ${supplement.schema}")
 
+    val valid_source = getValidSource(source)
+    logger.info(s"count of valid source data is: ${valid_source.count}")
+    logger.info(s"schema of valid source data is: ${valid_source.schema}")
+
+    val revision = getRevision(source)
+    logger.info(s"count of revision data is: ${revision.count}")
+    logger.info(s"schema of revision data is: ${revision.schema}")
+
+    val alternative = getAlternative(source)
+    logger.info(s"count of alternative data is: ${alternative.count}")
+    logger.info(s"schema of alternative data is: ${alternative.schema}")
+
     var attr_set: Map[(String, String, String, String), Array[(String, String, Long, Array[String])]] = null
     if (config.use_local_attr_set) {
       attr_set = new AttrSetFileIO().read("./.ads_bgn_attr_platform_rule_engine_attr_set")
     } else {
-      attr_set = getAttrSet(train_source)
+      attr_set = getAttrSet(valid_source)
       new AttrSetFileIO().write(attr_set, "./.ads_bgn_attr_platform_rule_engine_attr_set")
     }
     logger.info(s"size of attr set is: ${attr_set.size}")
     val attr_set_broadcast = sc.broadcast(attr_set)
     // debug start
     attr_set.foreach((e) => {
-      println("key:", e._1)
+      println("cate_and_attr_group:", e._1)
       e._2.foreach((se) => {
-        println("                ", se._1, se._2, se._3)
+        println("attr_values_sorted:", se._1, se._2, se._3)
       })
     })
     // debug end
 
-    val inference_under_rules = assembleUnderRules(inference_source, train_source, "revision")
-    logger.info(s"count of inference_under_rules is: ${inference_under_rules.count}")
-    logger.info(s"schema of inference_under_rules is: ${inference_under_rules.schema}")
-    val supplement_under_rules = assembleUnderRules(supplement, train_source, "supplement")
+    val revision_under_rules = assembleUnderRules(revision, alternative, "revision")
+    logger.info(s"count of revision_under_rules is: ${revision_under_rules.count}")
+    logger.info(s"schema of revision_under_rules is: ${revision_under_rules.schema}")
+    val supplement_under_rules = assembleUnderRules(supplement, alternative, "supplement")
     logger.info(s"count of supplement_under_rules is: ${supplement_under_rules.count}")
     logger.info(s"schema of supplement_under_rules is: ${supplement_under_rules.schema}")
 
-    val inference_target = execRules(inference_under_rules, attr_set_broadcast.value)
-    logger.info(s"count of inference_target is: ${inference_target.count}")
-    logger.info(s"schema of inference_target is: ${inference_target.schema}")
+    val revision_target = execRules(revision_under_rules, attr_set_broadcast.value)
+    logger.info(s"count of revision_target is: ${revision_target.count}")
+    logger.info(s"schema of revision_target is: ${revision_target.schema}")
     val supplement_target = execRules(supplement_under_rules, attr_set_broadcast.value)
     logger.info(s"count of supplement_target is: ${supplement_target.count}")
     logger.info(s"schema of supplement_target is: ${supplement_target.schema}")
 
-    writeTable(inference_target)
+    writeTable(revision_target)
     writeTable(supplement_target)
     spark.close()
   }
@@ -112,6 +127,8 @@ class RuleEngine(
             col("item_sku_id"),
             col("sku_name"),
             col("barndname_full"),
+            col("colour"),
+            col("size"),
             col("jd_prc"),
             col("com_attr_cd"),
             col("com_attr_name"),
@@ -154,17 +171,18 @@ class RuleEngine(
                               row.copy(old_attr_value_cd = row.com_attr_value_cd, old_attr_value_name = row.com_attr_value_name,
                                        com_attr_value_cd = revision._1, com_attr_value_name = revision._2)
                             })
+                            .filter((row) => row.com_attr_value_cd != null && row.com_attr_value_name != null)
                             .cache()
     target
   }
-  private def assembleUnderRules(source: Dataset[Source], train_source: Dataset[Source], flag: String): Dataset[Target] = {
+  private def assembleUnderRules(source: Dataset[Source], alternative: Dataset[Source], flag: String): Dataset[Target] = {
     import spark.implicits._
     val temp = source.withColumn("flag", lit(flag))
-    val alt_source = train_source.select($"item_sku_id", $"com_attr_group", $"com_attr_value_cd".as("alt_attr_value_cd"),
-                                         $"com_attr_value_name".as("alt_attr_value_name"))
-    val under_rules = temp.join(alt_source, Seq("item_sku_id", "com_attr_group"), "left")
+    val alt = alternative.select($"item_sku_id", $"com_attr_group", $"com_attr_value_cd".as("alt_attr_value_cd"),
+                                 $"com_attr_value_name".as("alt_attr_value_name"))
+    val under_rules = temp.join(alt, Seq("item_sku_id", "com_attr_group"), "left")
                           .groupBy($"item_first_cate_cd", $"item_second_cate_cd", $"item_third_cate_cd",
-                                   $"item_sku_id", $"sku_name", $"barndname_full", $"jd_prc",
+                                   $"item_sku_id", $"sku_name", $"barndname_full", $"colour", $"size", $"jd_prc",
                                    $"com_attr_cd", $"com_attr_name", $"com_attr_value_cd",
                                    $"com_attr_value_name", $"com_attr_group", $"flag")
                           .agg(first($"alt_attr_value_cd").as("alt_attr_value_cd"), first($"alt_attr_value_name").as("alt_attr_value_name"))
@@ -174,7 +192,7 @@ class RuleEngine(
                           .cache()
     under_rules
   }
-  private def getAttrSet(train_source: Dataset[Source]): Map[(String, String, String, String), Array[(String, String, Long, Array[String])]] = {
+  private def getAttrSet(valid_source: Dataset[Source]): Map[(String, String, String, String), Array[(String, String, Long, Array[String])]] = {
     import spark.implicits._
     val preprocessUdf = udf((item_first_cate_cd: String, com_attr_group: String, com_attr_value_name: String) => {
       val rule = common_rules((item_first_cate_cd, com_attr_group)).getRule
@@ -184,7 +202,7 @@ class RuleEngine(
         case _ => throw new Error(s"unknown rule ${rule} in item_first_cate_cd ${item_first_cate_cd} and com_attr_group ${com_attr_group}")
       }
     })
-    val attr_set = train_source.map((row) => {
+    val attr_set = valid_source.map((row) => {
                                  val key = common_rules((row.item_first_cate_cd, row.com_attr_group)).getCateKey(
                                                         row.item_first_cate_cd, row.item_second_cate_cd, row.item_third_cate_cd)
                                  row.copy(item_first_cate_cd = key._1, item_second_cate_cd = key._2, item_third_cate_cd = key._3)
@@ -221,7 +239,7 @@ class RuleEngine(
                                      .mkString("(", "," ,")")
     val source_sku_da = spark.sql(
       s"""
-        |select item_first_cate_cd,item_second_cate_cd,item_third_cate_cd,item_sku_id,sku_name,barndname_full
+        |select item_first_cate_cd,item_second_cate_cd,item_third_cate_cd,item_sku_id,sku_name,barndname_full,colour,size
         |  from gdm.gdm_m03_item_sku_da
         |  where item_first_cate_cd in ${item_first_cate_cds} and dt='${config.date}' and
         |  sku_valid_flag=1 and sku_status_cd!='3000' and sku_status_cd!='3010' and item_sku_id is not null and sku_name is not null
@@ -234,7 +252,7 @@ class RuleEngine(
       """.stripMargin)
     val source_sku_meta = source_sku_da.join(source_sku_da_mkt, Seq("item_sku_id"), "left")
                                        .groupBy($"item_first_cate_cd", $"item_second_cate_cd", $"item_third_cate_cd",
-                                                $"item_sku_id", $"sku_name", $"barndname_full")
+                                                $"item_sku_id", $"sku_name", $"barndname_full", $"colour", $"size")
                                        .agg(max($"jd_prc").alias("jd_prc"))
     val source_attr = spark.sql(
       s"""
@@ -257,13 +275,26 @@ class RuleEngine(
                                 .cache()
     source
   }
-  private def splitSource(source: Dataset[Source]): (Dataset[Source], Dataset[Source]) = {
+  private def getAttrCdNameMap(source: Dataset[Source]): Map[String, Map[String, String]] = {
     import spark.implicits._
-    val train_source = source.filter((row) => common_rules((row.item_first_cate_cd, row.com_attr_group)).filter(row.com_attr_value_cd, row.com_attr_value_name))
-                             .cache()
-    val inference_source = source.filter((row) => !common_rules((row.item_first_cate_cd, row.com_attr_group)).filter(row.com_attr_value_cd, row.com_attr_value_name))
-                                 .cache()
-    (train_source, inference_source)
+    source.select($"item_first_cate_cd", $"com_attr_cd", $"com_attr_name")
+          .distinct()
+          .collect()
+          .groupBy((row) => row.getAs[String]("item_first_cate_cd"))
+          .map {case (k, v) => (k, v.map((e) => (e.getAs[String]("com_attr_cd"), e.getAs[String]("com_attr_name"))).toMap)}
+          .toMap
+  }
+  private def getValidSource(source: Dataset[Source]): Dataset[Source] = {
+    source.filter((row) => common_rules((row.item_first_cate_cd, row.com_attr_group)).filterValid(row.com_attr_value_cd, row.com_attr_value_name))
+          .cache()
+  }
+  private def getRevision(source: Dataset[Source]): Dataset[Source] = {
+    source.filter((row) => common_rules((row.item_first_cate_cd, row.com_attr_group)).filterRevision(row.com_attr_value_cd, row.com_attr_value_name))
+          .cache()
+  }
+  private def getAlternative(source: Dataset[Source]): Dataset[Source] = {
+    source.filter((row) => !common_rules((row.item_first_cate_cd, row.com_attr_group)).filterRevision(row.com_attr_value_cd, row.com_attr_value_name))
+          .cache()
   }
   private def getRequiredAttr(source: Dataset[Source]): Map[(String, String), Set[(String, String)]] = {
     import spark.implicits._
@@ -276,7 +307,7 @@ class RuleEngine(
                            .agg(countDistinct($"item_sku_id").as("attr_count"))
     val required_attr = attr_count.join(cate_count, Seq("item_first_cate_cd", "item_second_cate_cd"))
                                   .withColumn("fraction", $"attr_count".cast("double") / $"cate_count".cast("double"))
-                                  .filter($"fraction" >= 0.6)
+                                  .filter($"fraction" >= 0.5)
                                   .collect()
                                   .groupBy((row) => (row.getAs[String]("item_first_cate_cd"), row.getAs[String]("item_second_cate_cd")))
                                   .map {case (k, v) => (k, v.map((e) => (e.getAs[String]("com_attr_cd"), e.getAs[String]("com_attr_name"))).toSet)}

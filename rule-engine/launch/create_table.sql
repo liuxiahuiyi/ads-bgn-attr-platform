@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS ${hivevar:taget_db_table} (
   item_sku_id         STRING COMMENT 'item sku id',
   sku_name            STRING COMMENT 'sku title',
   barndname_full      STRING COMMENT 'brand',
+  colour              STRING COMMENT 'colour',
+  size                STRING COMMENT 'size',
   jd_prc              STRING COMMENT 'jd price',
   com_attr_cd         STRING COMMENT 'common attribute name id',
   com_attr_name       STRING COMMENT 'common attribute name',

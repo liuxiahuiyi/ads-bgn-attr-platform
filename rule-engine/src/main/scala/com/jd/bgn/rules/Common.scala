@@ -8,13 +8,14 @@ import com.jd.bgn.utils.AttrValueUtil
 class Common(
   columns: Array[String],
   category_split: String,
+  revision_bulk: String,
   attr_value_length_mode: String,
   attr_value_omit: Array[String],
   rule: String
 ) extends Serializable {
   def getRule: String = rule
   def getColumns: Array[String] = columns
-  def filter(com_attr_value_cd: String, com_attr_value_name: String): Boolean = {
+  def filterValid(com_attr_value_cd: String, com_attr_value_name: String): Boolean = {
     com_attr_value_cd != null && 
     com_attr_value_cd.trim != "" &&
     com_attr_value_name != null &&
@@ -22,6 +23,11 @@ class Common(
     !com_attr_value_name.contains("其他") &&
     !com_attr_value_name.contains("其它") &&
     !attr_value_omit.contains(com_attr_value_name)
+  }
+  def filterRevision(com_attr_value_cd: String, com_attr_value_name: String): Boolean = revision_bulk match {
+    case "invalid" => !filterValid(com_attr_value_cd, com_attr_value_name)
+    case "all" => true
+    case _ => throw new Error(s"unknown revision bulk ${revision_bulk}")
   }
   def getCateKey(item_first_cate_cd: String, item_second_cate_cd: String, item_third_cate_cd: String): (String, String, String) = category_split match {
     case "item_first_cate_cd" => (item_first_cate_cd, null, null)
