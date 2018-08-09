@@ -30,7 +30,15 @@
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-compiler</artifactId>
         </dependency>
-
+        <!-- Apache Hadoop -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </dependency>
         <!-- Apache Spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>

@@ -5,7 +5,7 @@ import scala.util.matching.Regex._
 
 object AttrValueUtil extends Serializable {
   def split(value: String): Array[String] = {
-    val splited = "[&/(（)）]+".r.split(value)
+    val splited = "[&/、(（)）]+".r.split(value)
                                 .filter((e) => e != null && e.trim != "")
                                 .map(_.trim)
     if (splited.length > 1) {

@@ -6,6 +6,7 @@ case class Config(
   date: String,
   target_db_table: String,
   source_id: String,
+  repartition: Int,
   use_local_attr_set: Boolean
 ) extends Serializable
 
@@ -23,6 +24,7 @@ case class Source(
   com_attr_name: String,
   com_attr_value_cd: String,
   com_attr_value_name: String,
+  com_attr_value_rem: String,
   com_attr_group: String
 ) extends Serializable
 
@@ -40,19 +42,20 @@ case class Target(
   com_attr_name: String,
   com_attr_value_cd: String,
   com_attr_value_name: String,
+  com_attr_value_rem: String,
   com_attr_group: String,
-  flag: String,
   alt_attr_value_cd: String,
   alt_attr_value_name: String,
   old_attr_value_cd: String,
-  old_attr_value_name: String
+  old_attr_value_name: String,
+  source_id: String
 ) extends Serializable {
   def getMeta(column: String) = column match {
     case "sku_name" => sku_name
     case "barndname_full" => barndname_full
     case "colour" => colour
     case "size" => size
-    case "jd_prc" => jd_prc 
+    case "jd_prc" => jd_prc
     case "_" => throw new Error(s"unknown meta column ${column}")
   }
 }
