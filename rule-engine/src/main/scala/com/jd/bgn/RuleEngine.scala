@@ -6,6 +6,7 @@ import org.apache.spark.sql.{SaveMode, Dataset}
 import org.apache.spark.sql.functions._
 import org.apache.spark.broadcast.Broadcast
 import scala.util.matching.Regex._
+import collection.mutable.WrappedArray
 
 import com.jd.bgn.rules.{Common, Matching, Range, Age}
 import com.jd.bgn.defenitions.{Config, Source, Target}
@@ -208,7 +209,7 @@ class RuleEngine(
     val under_rules = source.join(alt, $"item_sku_id" === $"alt_item_sku_id" && $"com_attr_group" === $"alt_attr_group" &&
                                   $"com_attr_cd" =!= $"alt_attr_cd" && $"com_attr_name" =!= $"alt_attr_name", "left")
                             .groupBy($"item_first_cate_cd", $"item_second_cate_cd", $"item_third_cate_cd",
-                                     $"item_sku_id", $"sku_name", $"barndname_full", $"colour", $"size", $"jd_prc",
+                                     $"item_sku_id", $"sku_name", $"barndname_full", $"colour", $"size", $"jd_prc", $"item_type", $"item_img_txt",
                                      $"com_attr_cd", $"com_attr_name", $"com_attr_value_cd", $"com_attr_value_name",
                                      $"com_attr_value_rem", $"com_attr_group")
                             .agg(first($"alt_attr_value_cd").as("alt_attr_value_cd"), first($"alt_attr_value_name").as("alt_attr_value_name"))
@@ -267,7 +268,7 @@ class RuleEngine(
                                      .mkString("(", "," ,")")
     val source_sku_da = spark.sql(
       s"""
-        |select item_first_cate_cd,item_second_cate_cd,item_third_cate_cd,item_sku_id,sku_name,barndname_full,colour,size
+        |select item_first_cate_cd,item_second_cate_cd,item_third_cate_cd,item_id,item_sku_id,sku_name,barndname_full,colour,size,item_type
         |  from gdm.gdm_m03_item_sku_act
         |  where item_first_cate_cd in ${item_first_cate_cds} and dt='${config.date}' and
         |  sku_valid_flag=1 and sku_status_cd!='3000' and sku_status_cd!='3010' and item_sku_id is not null and sku_name is not null
@@ -288,12 +289,24 @@ class RuleEngine(
       s"""
         |select item_sku_id,jd_prc
         |  from gdm.gdm_m03_mkt_item_sku_da
-        |  where dt='${config.date}'
-      """.stripMargin)
+        |  where dt='${config.date}' and item_first_cate_cd in ${item_first_cate_cds}
+      """.stripMargin).groupBy($"item_sku_id")
+                      .agg(max($"jd_prc").alias("jd_prc"))
+    val listToStringUdf = udf((list: WrappedArray[String]) => {
+      list.mkString("\n")
+    })
+    val source_item_detail = spark.sql(
+      s"""
+        |select item_id,item_img_txt
+        |  from bgn.item_img2txt
+        |  where dp='ACTIVE' and item_first_cate_cd in ${item_first_cate_cds}
+      """.stripMargin).groupBy($"item_id")
+                      .agg(listToStringUdf(collect_list($"item_img_txt")).alias("item_img_txt"))
+
     val source_sku_meta = source_sku_da.join(source_sku_da_mkt, Seq("item_sku_id"), "left")
-                                       .groupBy($"item_first_cate_cd", $"item_second_cate_cd", $"item_third_cate_cd",
-                                                $"item_sku_id", $"sku_name", $"barndname_full", $"colour", $"size")
-                                       .agg(max($"jd_prc").alias("jd_prc"))
+                                       .join(source_item_detail, Seq("item_id"), "left")
+                                       .drop($"item_id")
+
     val source_attr = spark.sql(
       s"""
         |select cate_id as item_third_cate_cd,item_sku_id,com_attr_cd,com_attr_name,

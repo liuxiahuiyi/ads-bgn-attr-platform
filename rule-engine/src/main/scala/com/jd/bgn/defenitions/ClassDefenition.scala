@@ -20,6 +20,8 @@ case class Source(
   colour: String,
   size: String,
   jd_prc: String,
+  item_type: String,
+  item_img_txt: String,
   com_attr_cd: String,
   com_attr_name: String,
   com_attr_value_cd: String,
@@ -38,6 +40,8 @@ case class Target(
   colour: String,
   size: String,
   jd_prc: String,
+  item_type: String,
+  item_img_txt: String,
   com_attr_cd: String,
   com_attr_name: String,
   com_attr_value_cd: String,
@@ -56,6 +60,8 @@ case class Target(
     case "colour" => colour
     case "size" => size
     case "jd_prc" => jd_prc
+    case "item_type" => item_type
+    case "item_img_txt" => item_img_txt
     case "_" => throw new Error(s"unknown meta column ${column}")
   }
 }
