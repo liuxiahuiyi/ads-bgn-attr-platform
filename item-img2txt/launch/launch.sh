@@ -1,18 +1,24 @@
 #!/bin/bash
-set -e
 dir=$(dirname "$0")
 today=`date +"%Y-%m-%d" -d "$1 -1 days"`
-taget_db_table=$2
+target_db_table=$2
+target_db_table_split=(${target_db_table//./ })
+target_db=${target_db_table_split[0]}
+target_table=${target_db_table_split[1]}
 library_hdfs=$3
 ocr_trained_data_hdfs=$4
 item_first_cate_cds=$5
+hdfs_prefix='hdfs://ns1018/user/jd_ad/ads_aof/'
 clear_date=`date +"%Y-%m-%d" -d "$1 -3 days"`
 jars=$(ls -al $dir/../lib|grep "^-"|awk -v root="${dir}" 'BEGIN{ORS=","}{print root"/../lib/"$9}')
 
 hive -f "${dir}/create_table.sql" \
   -hivevar current_date=${today} \
   -hivevar clear_date=${clear_date} \
-  -hivevar taget_db_table=${taget_db_table}
+  -hivevar target_db=${target_db} \
+  -hivevar target_table=${target_table} \
+  -hivevar hdfs_prefix=${hdfs_prefix}
+
 
 spark-submit \
   --name ads_bgn_item_img2txt \
@@ -22,7 +28,7 @@ spark-submit \
   --executor-memory 10g \
   --executor-cores 3 \
   --num-executors 400 \
-  --queue root.bdp_jmart_sz_union.bdp_jmart_sz_data_low \
+  --queue root.bdp_jmart_ad_data.jd_ad_data_low \
   --driver-memory 5g \
   --jars ${jars} \
   --conf spark.storage.memoryFraction=0.4 \
@@ -35,7 +41,17 @@ spark-submit \
   --conf spark.network.timeout=1200 \
   $dir/../lib/item-img2txt-1.0-SNAPSHOT.jar \
   --date ${today} \
-  --taget_db_table ${taget_db_table} \
+  --target_db_table ${target_db_table} \
   --library_hdfs ${library_hdfs} \
   --ocr_trained_data_hdfs ${ocr_trained_data_hdfs} \
   --item_first_cate_cds ${item_first_cate_cds}
+
+partitions=`hadoop fs -ls "${hdfs_prefix}/${target_db}.db/${target_table}/dp=EXPIRE"|awk '{print $8}'`
+for p in ${partitions[@]}; do
+  if [[ ${p: -10} < "${clear_date}" ]]; then
+    hadoop fs -rm -r "${p}"
+  fi
+done
+hive -e "ALTER TABLE ${target_db_table} DROP IF EXISTS PARTITION (dp='EXPIRE', end_date<'${clear_date}')"
+hive -e "MSCK REPAIR TABLE ${target_db_table}"
+

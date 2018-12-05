@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS ${hivevar:taget_db_table} (
+CREATE TABLE IF NOT EXISTS ${hivevar:target_db}.${hivevar:target_table} (
   item_second_cate_cd STRING COMMENT 'item second category id',
   item_third_cate_cd  STRING COMMENT 'item third category id',
   item_sku_id         STRING COMMENT 'item sku id',
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS ${hivevar:taget_db_table} (
   barndname_full      STRING COMMENT 'brand',
   colour              STRING COMMENT 'colour',
   size                STRING COMMENT 'size',
-  jd_prc              STRING COMMENT 'jd price',
+  item_type           STRING COMMENT 'item type',
   com_attr_cd         STRING COMMENT 'common attribute name id',
   com_attr_name       STRING COMMENT 'common attribute name',
   com_attr_value_cd   STRING COMMENT 'common attribute value id',
@@ -26,6 +26,5 @@ PARTITIONED BY (
 )
 ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
 STORED AS ORC
+LOCATION '${hivevar:hdfs_prefix}/${hivevar:target_db}.db/${hivevar:target_table}'
 TBLPROPERTIES ('orc.compress'='SNAPPY');
-
-ALTER TABLE ${hivevar:taget_db_table} DROP IF EXISTS PARTITION (dt < '${hivevar:clear_date}');

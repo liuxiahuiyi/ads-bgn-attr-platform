@@ -36,6 +36,7 @@ class RuleEngine(
     val sc = spark.sparkContext
     spark.sqlContext.setConf("hive.exec.dynamic.partition", "true")
     spark.sqlContext.setConf("hive.exec.dynamic.partition.mode", "nonstrict")
+    spark.sqlContext.setConf("hive.warehouse.data.skipTrash", "true")
     config_broadcast = sc.broadcast(config)
     attr_group_map_broadcast = sc.broadcast(attr_group_map)
     // debug
@@ -132,7 +133,7 @@ class RuleEngine(
             col("barndname_full"),
             col("colour"),
             col("size"),
-            col("jd_prc"),
+            col("item_type"),
             col("com_attr_cd"),
             col("com_attr_name"),
             col("com_attr_value_cd"),
@@ -209,7 +210,7 @@ class RuleEngine(
     val under_rules = source.join(alt, $"item_sku_id" === $"alt_item_sku_id" && $"com_attr_group" === $"alt_attr_group" &&
                                   $"com_attr_cd" =!= $"alt_attr_cd" && $"com_attr_name" =!= $"alt_attr_name", "left")
                             .groupBy($"item_first_cate_cd", $"item_second_cate_cd", $"item_third_cate_cd",
-                                     $"item_sku_id", $"sku_name", $"barndname_full", $"colour", $"size", $"jd_prc", $"item_type", $"item_img_txt",
+                                     $"item_sku_id", $"sku_name", $"barndname_full", $"colour", $"size", $"item_type", $"item_img_txt",
                                      $"com_attr_cd", $"com_attr_name", $"com_attr_value_cd", $"com_attr_value_name",
                                      $"com_attr_value_rem", $"com_attr_group")
                             .agg(first($"alt_attr_value_cd").as("alt_attr_value_cd"), first($"alt_attr_value_name").as("alt_attr_value_name"))
@@ -285,26 +286,18 @@ class RuleEngine(
                                                    .map { case (k, v) => k._1 }
                                                    .toSet
 
-    val source_sku_da_mkt = spark.sql(
-      s"""
-        |select item_sku_id,jd_prc
-        |  from gdm.gdm_m03_mkt_item_sku_da
-        |  where dt='${config.date}' and item_first_cate_cd in ${item_first_cate_cds}
-      """.stripMargin).groupBy($"item_sku_id")
-                      .agg(max($"jd_prc").alias("jd_prc"))
     val listToStringUdf = udf((list: WrappedArray[String]) => {
       list.mkString("\n")
     })
     val source_item_detail = spark.sql(
       s"""
         |select item_id,item_img_txt
-        |  from bgn.item_img2txt
+        |  from ad_bgn.item_img2txt
         |  where dp='ACTIVE' and item_first_cate_cd in ${item_first_cate_cds}
       """.stripMargin).groupBy($"item_id")
                       .agg(listToStringUdf(collect_list($"item_img_txt")).alias("item_img_txt"))
 
-    val source_sku_meta = source_sku_da.join(source_sku_da_mkt, Seq("item_sku_id"), "left")
-                                       .join(source_item_detail, Seq("item_id"), "left")
+    val source_sku_meta = source_sku_da.join(source_item_detail, Seq("item_id"), "left")
                                        .drop($"item_id")
 
     val source_attr = spark.sql(
@@ -318,7 +311,7 @@ class RuleEngine(
         |  com_attr_value_cd,com_attr_value_name,com_attr_value_rem
         |  from gdm.gdm_m03_item_sku_spec_par_da
         |  where dt='${config.date}' and cate_id in ${item_third_cate_cds}
-      """.stripMargin).cache()
+      """.stripMargin)
     val attrValueLength = udf((com_attr_value_name: String) => AttrValueUtil.length(com_attr_value_name, "word"))
     val attrValueFilter = udf((item_first_cate_cd: String, com_attr_value_name: String) => remark_enable_first_cate_ids.contains(item_first_cate_cd) &&
                                                                                            com_attr_value_name != null &&

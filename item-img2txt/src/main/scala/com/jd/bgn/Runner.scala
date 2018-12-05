@@ -8,7 +8,7 @@ object Runner {
   private final val logger = LoggerFactory.getLogger(Runner.getClass)
 
   private final val CLI_OPT_DATE = "date"
-  private final val CLI_OPT_TARGET_DB_TABLE = "taget_db_table"
+  private final val CLI_OPT_TARGET_DB_TABLE = "target_db_table"
   private final val CLI_LIBRARY_HDFS = "library_hdfs"
   private final val CLI_OCR_TRAINED_DATA_HDFS = "ocr_trained_data_hdfs"
   private final val CLI_ITEM_FIRST_CATE_CDS = "item_first_cate_cds"

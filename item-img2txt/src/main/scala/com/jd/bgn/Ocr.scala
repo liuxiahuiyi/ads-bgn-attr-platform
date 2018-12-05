@@ -20,7 +20,7 @@ class Ocr extends Serializable {
         tess.setLanguage("chi_sim")
         tess.setOcrEngineMode(3)
         tess.setPageSegMode(3)
-        tess.doOCR(image).replaceAll("(NULL|\\t| |\\n)", "")
+        tess.doOCR(image).replaceAll(" ", "").replaceAll("(NULL|\\t|\\n)", " ")
       } else {
         null
       }

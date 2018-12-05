@@ -17,6 +17,7 @@ class Transfomer(
   	val sc = spark.sparkContext
     spark.sqlContext.setConf("hive.exec.dynamic.partition", "true")
     spark.sqlContext.setConf("hive.exec.dynamic.partition.mode", "nonstrict")
+    spark.sqlContext.setConf("hive.warehouse.data.skipTrash", "true")
     sc.addFile(config.library_hdfs, true)
     sc.addFile(config.ocr_trained_data_hdfs, true)
     val (target_retain, target_expire, under_transform) = getUnderTransform()
@@ -48,7 +49,7 @@ class Transfomer(
                                              lit("EXPIRE").alias("dp"), lit(config.date).alias("end_date"), $"item_first_cate_cd"))
                  .union(target_new.select($"item_id", $"item_img_url", $"item_img_txt", $"start_date",
                                           lit("ACTIVE").alias("dp"), lit("9999-12-31").alias("end_date"), $"item_first_cate_cd"))
-                 .repartition(1000)
+                 .repartition(10)
                  .write
                  .mode(SaveMode.Append)
                  .insertInto(config.target_db_table)
@@ -69,7 +70,7 @@ class Transfomer(
       s"""
         |select item_first_cate_cd,item_id
         |  from gdm.gdm_m03_item_sku_act
-        |  where dt='${config.date}' ${config.getFirstCateCondition} and
+        |  where dt='${config.calDate(-1)}' ${config.getFirstCateCondition} and
         |  sku_valid_flag=1 and sku_status_cd!='3000' and sku_status_cd!='3010' and item_id is not null
       """.stripMargin).distinct()
     val item_big_info = spark.sql(

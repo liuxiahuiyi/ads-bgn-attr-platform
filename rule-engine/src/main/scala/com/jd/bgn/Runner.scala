@@ -9,7 +9,7 @@ object Runner {
   private final val logger = LoggerFactory.getLogger(Runner.getClass)
 
   private final val CLI_OPT_DATE = "date"
-  private final val CLI_OPT_TARGET_DB_TABLE = "taget_db_table"
+  private final val CLI_OPT_TARGET_DB_TABLE = "target_db_table"
   private final val CLI_SOURCE_ID = "source_id"
   private final val CLI_REPARTITION = "repartition"
   private final val CLI_USE_LOCAL_ATTR_SET = "use_local_attr_set"
