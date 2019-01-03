@@ -46,12 +46,4 @@ spark-submit \
   --ocr_trained_data_hdfs ${ocr_trained_data_hdfs} \
   --item_first_cate_cds ${item_first_cate_cds}
 
-partitions=`hadoop fs -ls "${hdfs_prefix}/${target_db}.db/${target_table}/dp=EXPIRE"|awk '{print $8}'`
-for p in ${partitions[@]}; do
-  if [[ ${p: -10} < "${clear_date}" ]]; then
-    hadoop fs -rm -r "${p}"
-  fi
-done
-hive -e "ALTER TABLE ${target_db_table} DROP IF EXISTS PARTITION (dp='EXPIRE', end_date<'${clear_date}')"
-hive -e "MSCK REPAIR TABLE ${target_db_table}"
 

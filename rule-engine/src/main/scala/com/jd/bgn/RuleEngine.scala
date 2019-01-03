@@ -36,7 +36,6 @@ class RuleEngine(
     val sc = spark.sparkContext
     spark.sqlContext.setConf("hive.exec.dynamic.partition", "true")
     spark.sqlContext.setConf("hive.exec.dynamic.partition.mode", "nonstrict")
-    spark.sqlContext.setConf("hive.warehouse.data.skipTrash", "true")
     config_broadcast = sc.broadcast(config)
     attr_group_map_broadcast = sc.broadcast(attr_group_map)
     // debug
@@ -123,7 +122,7 @@ class RuleEngine(
     import spark.implicits._
     val item_first_cate_cds = attr_group_map.keys
     for (item_first_cate_cd <- item_first_cate_cds) {
-      spark.sql(s"ALTER TABLE ${config.target_db_table} DROP IF EXISTS PARTITION (dt='${config.date}', flag='${flag}', item_first_cate_cd='${item_first_cate_cd}')")
+      spark.sql(s"ALTER TABLE ${config.target_db_table} DROP IF EXISTS PARTITION (dt='${config.date}', flag='${flag}', item_first_cate_cd='${item_first_cate_cd}') PURGE")
     }
     target.select(
             col("item_second_cate_cd"),

@@ -27,6 +27,7 @@
     <modules>
         <module>rule-engine</module>
         <module>item-img2txt</module>
+        <module>attr-bert-model</module>
     </modules>
 
     <dependencyManagement>

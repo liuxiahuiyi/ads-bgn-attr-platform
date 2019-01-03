@@ -49,12 +49,3 @@ spark-submit \
   --use_local_attr_set false \
   --rule_file ${rule_file}
 
-partitions=`hadoop fs -ls "${hdfs_prefix}/${target_db}.db/${target_table}/"|awk '{print $8}'`
-for p in ${partitions[@]}; do
-  if [[ ${p: -10} < "${clear_date}" ]]; then
-    hadoop fs -rm -r "${p}"
-  fi
-done
-hive -e "ALTER TABLE ${target_db_table} DROP IF EXISTS PARTITION (dt<'${clear_date}')"
-hive -e "MSCK REPAIR TABLE ${target_db_table}"
-

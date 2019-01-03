@@ -28,3 +28,5 @@ ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
 STORED AS ORC
 LOCATION '${hivevar:hdfs_prefix}/${hivevar:target_db}.db/${hivevar:target_table}'
 TBLPROPERTIES ('orc.compress'='SNAPPY');
+
+ALTER TABLE ${hivevar:target_db}.${hivevar:target_table} DROP IF EXISTS PARTITION (dt<'${hivevar:clear_date}') PURGE;
