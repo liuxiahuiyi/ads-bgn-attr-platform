@@ -42,9 +42,10 @@ class Matching(
       } else {
         if ("[^\u4e00-\u9fa5]".r.replaceAllIn(first_element, "").length > 1 || first_element.length > 2) {
           preprocessed = preprocessed :+ AttrValueUtil.getPattern(first_element, s".{0,${tolerance}}")
-        }
-        if ("[^\u4e00-\u9fa5]".r.replaceAllIn(second_element, "").length > 1 || second_element.length > 2) {
+        } else if ("[^\u4e00-\u9fa5]".r.replaceAllIn(second_element, "").length > 1 || second_element.length > 2) {
           preprocessed = preprocessed :+ AttrValueUtil.getPattern(second_element, s".{0,${tolerance}}")
+        } else {
+          preprocessed = preprocessed :+ AttrValueUtil.getPattern(attr_value_name, s".{0,${tolerance}}")
         }
       }
     }
