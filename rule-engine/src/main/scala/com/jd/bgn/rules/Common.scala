@@ -14,6 +14,7 @@ class Common(
   supplement_min_fraction: Double,
   attr_value_length_mode: String,
   attr_value_omit: Array[String],
+  attr_value_complement: Array[(String, String)],
   attr_value_min_proprttion: Double,
   rule: String
 ) extends Serializable {
@@ -24,6 +25,7 @@ class Common(
     }
   }
   def getAttrValueScarce(): Array[String] = attr_value_scarce
+  def getAttrValueComplement(): Array[(String, String)] = attr_value_complement
   def getRule: String = rule
   def getRemarkEnable: Boolean = remark_enable
   def getColumns: Array[String] = columns

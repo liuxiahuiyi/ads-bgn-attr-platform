@@ -69,11 +69,11 @@ class Transfomer(
       """.stripMargin).distinct()
     val item_big_info = spark.sql(
       s"""
-        |select product_id as item_id, wdis
+        |select product_id as item_id,wdis
         |  from fdm.fdm_exaitem_biginfo_biginfo_product_1_chain
-        |  where dp='ACTIVE' and start_date='${config.calDate(-1)}'
+        |  where dp='ACTIVE' and start_date>='${config.calDate(-30)}'
       """.stripMargin).groupBy($"item_id")
-                      .agg(max($"wdis").alias("item_img_url"))
+                      .agg(last($"wdis").alias("item_img_url"))
     val items = skus.join(item_big_info, Seq("item_id"))
                     .withColumn("item_img_txt", lit(null))
                     .withColumn("start_date", lit(config.date))
@@ -109,22 +109,11 @@ class Transfomer(
                                      $"start_date_r".alias("start_date"))
                              .as[Target]
                              .cache()
-    val tmp1 = tmp.filter($"item_first_cate_cd".isNotNull && $"item_id".isNotNull && $"item_img_url".isNotNull &&
-                          $"item_first_cate_cd_r".isNotNull && $"item_id_r".isNotNull && $"item_img_url_r".isNotNull)
-                  .select($"item_first_cate_cd", $"item_id", $"item_img_url", $"item_img_txt", $"start_date")
-                  .as[Target]
-    val tmp2 = tmp.filter($"item_first_cate_cd_r".isNull && $"item_id_r".isNull && $"item_img_url_r".isNull)
-                  .select($"item_first_cate_cd", $"item_id", $"item_img_url", $"item_img_txt", $"start_date")
-                  .as[Target]
-    val tmp3 = tmp2.join(tmp.select($"item_first_cate_cd_r", $"item_id_r")
-                            .filter($"item_first_cate_cd_r".isNotNull && $"item_id_r".isNotNull)
-                            .distinct(),
-                         $"item_first_cate_cd" === $"item_first_cate_cd_r" &&
-                         $"item_id" === $"item_id_r", "left")
-    val tmp4 = tmp3.filter($"item_first_cate_cd_r".isNull && $"item_id_r".isNull)
-                   .select($"item_first_cate_cd", $"item_id", $"item_img_url", $"item_img_txt", $"start_date")
-                   .as[Target]
-    val target_retain = tmp1.union(tmp4).cache()
+    val target_retain = tmp.filter($"item_first_cate_cd".isNotNull && $"item_id".isNotNull && $"item_img_url".isNotNull &&
+                                   $"item_first_cate_cd_r".isNotNull && $"item_id_r".isNotNull && $"item_img_url_r".isNotNull)
+                           .select($"item_first_cate_cd", $"item_id", $"item_img_url", $"item_img_txt", $"start_date")
+                           .as[Target]
+                           .cache()
     return (target_retain, under_transform)
   }
 }

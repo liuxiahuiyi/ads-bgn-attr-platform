@@ -222,15 +222,15 @@ class RuleEngine(
   }
   private def getAttrSet(valid_source: Dataset[Source]): Map[(String, String, String, String), Array[(String, String, Long, Array[String])]] = {
     import spark.implicits._
-    val preprocessUdf = udf((item_first_cate_cd: String, com_attr_group: String, com_attr_value_name: String) => {
-      val rule = common_rules_broadcast.value((item_first_cate_cd, com_attr_group)).getRule
+    val preprocess = (item_first_cate_cd: String, com_attr_group: String, com_attr_value_name: String) => {
+      val rule = common_rules((item_first_cate_cd, com_attr_group)).getRule
       rule match {
-        case "matching" => matching_rules_broadcast.value((item_first_cate_cd, com_attr_group)).preprocess(com_attr_value_name)
-        case "range" => range_rules_broadcast.value((item_first_cate_cd, com_attr_group)).preprocess(com_attr_value_name)
-        case "age" => age_rules_broadcast.value((item_first_cate_cd, com_attr_group)).preprocess(com_attr_value_name)
+        case "matching" => matching_rules((item_first_cate_cd, com_attr_group)).preprocess(com_attr_value_name)
+        case "range" => range_rules((item_first_cate_cd, com_attr_group)).preprocess(com_attr_value_name)
+        case "age" => age_rules((item_first_cate_cd, com_attr_group)).preprocess(com_attr_value_name)
         case _ => throw new Error(s"unknown rule ${rule} in item_first_cate_cd ${item_first_cate_cd} and com_attr_group ${com_attr_group}")
       }
-    })
+    }
     val attr_set = valid_source.map((row) => {
                                  val key = common_rules_broadcast.value((row.item_first_cate_cd, row.com_attr_group)).getCateKey(
                                                                          row.item_first_cate_cd, row.item_second_cate_cd, row.item_third_cate_cd)
@@ -239,18 +239,19 @@ class RuleEngine(
                                .groupBy($"item_first_cate_cd", $"item_second_cate_cd", $"item_third_cate_cd",
                                         $"com_attr_group", $"com_attr_value_cd", $"com_attr_value_name")
                                .agg(countDistinct($"item_sku_id").as("com_attr_value_count"))
-                               .withColumn("com_attr_value_preprocess", preprocessUdf($"item_first_cate_cd", $"com_attr_group", $"com_attr_value_name"))
                                .collect()
                                .groupBy((row) => (row.getAs[String]("item_first_cate_cd"), row.getAs[String]("item_second_cate_cd"),
                                                   row.getAs[String]("item_third_cate_cd"), row.getAs[String]("com_attr_group")))
                                .map {
                                  case (k, v) => {
                                    val rule = common_rules((k._1, k._4))
-                                   val sorted_v = v.map((e) => (e.getAs[String]("com_attr_value_cd"), e.getAs[String]("com_attr_value_name"),
-                                                                e.getAs[Long]("com_attr_value_count"), e.getAs[Seq[String]]("com_attr_value_preprocess").toArray))
-                                                   .sortWith((value_a, value_b) => {
-                                                     rule.sort((value_a._1, value_a._2, value_a._3), (value_b._1, value_b._2, value_b._3))
-                                                   })
+                                   val v_new = {
+                                                 rule.getAttrValueComplement().map((e) => (e._1, e._2, 0.toLong)) ++
+                                                 v.map((e) => (e.getAs[String]("com_attr_value_cd"), e.getAs[String]("com_attr_value_name"), e.getAs[Long]("com_attr_value_count")))
+                                               }.map((e) => (e._1, e._2, e._3, preprocess(k._1, k._4, e._2)))
+                                   val sorted_v = v_new.sortWith((value_a, value_b) => {
+                                                    rule.sort((value_a._1, value_a._2, value_a._3), (value_b._1, value_b._2, value_b._3))
+                                                  })
                                    (k, sorted_v)
                                  }
                                }
@@ -285,16 +286,13 @@ class RuleEngine(
                                                    .map { case (k, v) => k._1 }
                                                    .toSet
 
-    val listToStringUdf = udf((list: WrappedArray[String]) => {
-      list.mkString("\n")
-    })
     val source_item_detail = spark.sql(
       s"""
         |select item_id,item_img_txt
         |  from ad_bgn.item_img2txt
         |  where dp='ACTIVE' and item_first_cate_cd in ${item_first_cate_cds}
       """.stripMargin).groupBy($"item_id")
-                      .agg(listToStringUdf(collect_list($"item_img_txt")).alias("item_img_txt"))
+                      .agg(concat_ws("\n", collect_set($"item_img_txt")).alias("item_img_txt"))
 
     val source_sku_meta = source_sku_da.join(source_item_detail, Seq("item_id"), "left")
                                        .drop($"item_id")

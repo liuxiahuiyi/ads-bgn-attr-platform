@@ -19,6 +19,7 @@ class RulesGenerator(path: String) extends Serializable {
                              "supplement.min_fraction" -> "0.5",
                              "attr_value.length_mode" -> "char",
                              "attr_value.omit" -> "",
+                             "attr_value.complement" -> "",
                              "attr_value.min_proprttion" -> "0",
                              "rule" -> "matching",
                              "rule.matching.context.left.regex" -> "",
@@ -82,7 +83,7 @@ class RulesGenerator(path: String) extends Serializable {
             case null => defaults("columns")
             case _ => properties.getProperty(s"${cate_attr_group_id}.columns")
           }
-        }.split(",").filter(_ != null)
+        }.split(",").filter(_ != "")
         val remark_enable = if ({
           properties.getProperty(s"${cate_attr_group_id}.remark_enable") match {
             case null => defaults("remark_enable")
@@ -112,7 +113,18 @@ class RulesGenerator(path: String) extends Serializable {
             case null => defaults("attr_value.omit")
             case _ => properties.getProperty(s"${cate_attr_group_id}.attr_value.omit")
           }
-        }.split(",").filter(_ != null)
+        }.split(",").filter(_ != "")
+        val attr_value_complement = {
+          properties.getProperty(s"${cate_attr_group_id}.attr_value.complement") match {
+            case null => defaults("attr_value.complement")
+            case _ => properties.getProperty(s"${cate_attr_group_id}.attr_value.complement")
+          }
+        }.split(",")
+         .filter(_ != "")
+         .map((e) => {
+           val block = e.split(":").filter(_ != "")
+           if (block.length == 1) ("-1", block(0)) else (block(1), block(0))
+         })
         val attr_value_min_proprttion = {
           properties.getProperty(s"${cate_attr_group_id}.attr_value.min_proprttion") match {
             case null => defaults("attr_value.min_proprttion")
@@ -125,7 +137,7 @@ class RulesGenerator(path: String) extends Serializable {
         }
         common_rules = common_rules ++ Map((item_first_cate_cd, com_attr_cd_group) -> new Common(
           columns, remark_enable, category_split, revision_bulk, supplement_min_fraction,
-          attr_value_length_mode, attr_value_omit, attr_value_min_proprttion, rule))
+          attr_value_length_mode, attr_value_omit, attr_value_complement, attr_value_min_proprttion, rule))
 
         rule match {
           case "matching" => {
